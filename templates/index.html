@@ -1,0 +1,62 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <title>garage-pi</title>
+        <meta charset="utf-8">
+        <meta name="description" content="Raspberry Pi control RC car.">
+        <meta name="author" content="Michael Russell">
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+        <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
+        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+        <script>
+        // socket IO client side
+        window.onload = function() {
+          var socket = io.connect('http://' + document.domain + ':' + location.port + '/status');
+          socket.on('status', function(json) {
+              console.log("received status");
+              console.log(json);
+
+              door1button = document.getElementById("door1button");
+              door2button = document.getElementById("door2button");
+              // update buttons
+              if (json.door1)
+              {
+                door1button.src = "/static/close.jpg";
+              } else {
+                door1button.src = "/static/open.jpg";
+              }
+              if (json.door2)
+              {
+                door2button.src = "/static/close.jpg";
+              } else {
+                door2button.src = "/static/open.jpg";
+              }
+
+          }); // end socket.on
+        }
+        function trigger1()
+        {
+          $.getJSON('/trigger1', {},
+            function(data) {
+               // server Response
+            });
+        }
+        function trigger2()
+        {
+          $.getJSON('/trigger2', {},
+            function(data) {
+               // server Response
+            });
+        }
+        </script>
+
+        </head>
+        <body>
+        Welcome to garage-pi.<br>
+        <img src="{{doorimage}}"></img><br>
+        <img id="door1button" src="{{ door1buttonimage }}" onClick="trigger1();"></img><br>
+        <img id="door2button" src="{{ door2buttonimage }}" onClick="trigger2();"></img><br>
+        </body>
+        </html>
