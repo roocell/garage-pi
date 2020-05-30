@@ -1,7 +1,8 @@
 #!/usr/bin/python3
 from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask import Response
-import json, os, time
+import json, os, time, sys
+from importlib import import_module
 import logging
 from flask_socketio import SocketIO, emit
 import atexit
@@ -23,38 +24,70 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app)
 
+# import camera driver
+os.environ['CAMERA'] = "opencv"
+os.environ['OPENCV_CAMERA_SOURCE'] = "0"
+os.environ['FPS'] = "1"
+fps = int(os.environ['FPS'])
+if os.environ.get('CAMERA'):
+    Camera = import_module('camera_' + os.environ['CAMERA']).Camera
+else:
+    from camera import Camera
+
+
+user = "roocell"
+password = "garage-pi"
+
 door1 = 7  # GPIO4
 door2 = 37 # GPIO26
 
-relay1 = 12 # GPIO18
-relay2 = 16 # GPIO23
-relay3 = 18 # GPIO24
-relay4 = 22 # GPIO25
+relay1 = 10 # GPIO15
+relay2 = 8 # GPIO14
 
 def setupgpio():
     GPIO.setmode(GPIO.BOARD)       # use PHYSICAL GPIO Numbering
     GPIO.setup(door1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(door2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
+    # connection is on the NO (normally open) port
+    # on the relay
+    # this is so when the pi is powered off, the doors
+    # won't move
     GPIO.setup(relay1, GPIO.OUT)
-    GPIO.output(relay1, GPIO.LOW)  # default LOW (off)
+    GPIO.output(relay1, GPIO.HIGH)  # default LOW (off)
+    GPIO.setup(relay2, GPIO.OUT)
+    GPIO.output(relay2, GPIO.HIGH)  # default LOW (off)
+
+
+def getDoorStatus():
+    if (GPIO.input(door1) == GPIO.LOW):
+        newstatus1 = False;
+    else:
+        # ideally we would have another sensor at the open position too
+        # but let's just assume it's at least partially open
+        newstatus1 = True
+
+    if (GPIO.input(door2) == GPIO.LOW):
+        newstatus2 = False;
+    else:
+        newstatus2 = True
+    return {'door1' : newstatus1, 'door2' : newstatus2 }
+
+status1 = False
+status2 = False
 
 def loop(socketio):
+    global status1
+    global status2
     setupgpio()
     while True:
-        status1 = False
-        status2 = False
-        if (GPIO.input(door1) == GPIO.LOW):
-            log.debug("door1 closed")
-        else:
-            log.debug("door1 open")
-            status1 = True
-        if (GPIO.input(door2) == GPIO.LOW):
-            log.debug("door2 closed")
-        else:
-            log.debug("door2 open")
-            status2 = True
-        socketio.emit('status', {'door1' : status1, 'door2' : status2 }, namespace='/status', broadcast=True)
+        status = getDoorStatus()
+        #log.debug(status)
+        # only emit if there's a change
+        if (status['door1'] != status1 or status['door2'] != status2):
+            socketio.emit('status', status, namespace='/status', broadcast=True)
+        status1 = status['door1']
+        status2 = status['door2']
         time.sleep(1)                   # Wait for 1 second
 
 
@@ -62,15 +95,7 @@ def loop(socketio):
 # routes
 @app.route('/')
 def index():
-    if (GPIO.input(door1) == GPIO.LOW):
-        door1buttonimage = '/static/open.jpg';
-    else:
-        door1buttonimage = '/static/close.jpg';
-    if (GPIO.input(door2) == GPIO.LOW):
-        door2buttonimage = '/static/open.jpg';
-    else:
-        door2buttonimage = '/static/close.jpg';
-    return render_template('index.html', door1buttonimage=door1buttonimage, door2buttonimage=door2buttonimage);
+    return render_template('index.html');
 
 # there is no open/close GPIO value
 # just set it high to move door.
@@ -82,9 +107,10 @@ def trigger1():
     else:
         log.debug("closing door 1")
     # trigger door
-    GPIO.output(relay1, GPIO.HIGH)
-    time.sleep(1)
     GPIO.output(relay1, GPIO.LOW)
+    time.sleep(0.5)
+    GPIO.output(relay1, GPIO.HIGH)
+    return "OK"
 
 @app.route('/trigger2')
 def trigger2():
@@ -92,19 +118,32 @@ def trigger2():
         log.debug("opening door 2")
     else:
         log.debug("closing door 2")
+
     # trigger door
-    GPIO.output(relay2, GPIO.HIGH)
-    time.sleep(1)
     GPIO.output(relay2, GPIO.LOW)
+    time.sleep(0.5)
+    GPIO.output(relay2, GPIO.HIGH)
+    return "OK"
 
 @app.route('/status')
 @socketio.on('connect', namespace='/status')
 def connect():
+    global status1
+    global status2
     log.debug("flask client connected")
+    status = getDoorStatus()
+    status1 = status['door1']
+    status2 = status['door2']
+    # always emit at connect so client can update
+    socketio.emit('status', status, namespace='/status', broadcast=True)
     return "OK"
 @socketio.on('disconnect', namespace='/status')
 def test_disconnect():
     print('flask client disconnected')
+
+@app.route('/rtsp')
+def rtsp():
+    return render_template('rtsp.html');
 
 #=====================================================
 # main

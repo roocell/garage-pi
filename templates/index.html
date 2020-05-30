@@ -6,32 +6,67 @@
         <meta name="description" content="Raspberry Pi control RC car.">
         <meta name="author" content="Michael Russell">
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <script src="//cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+
+        <style>
+        .button {
+          padding: 15px 25px;
+          font-size: 24px;
+          text-align: center;
+          cursor: pointer;
+          outline: none;
+          color: #fff;
+          background-color: #4CAF50;
+          border: none;
+          border-radius: 15px;
+          box-shadow: 0 9px #999;
+        }
+
+        .button:hover {background-color: #3e8e41}
+
+        .button:active {
+          background-color: #3e8e41;
+          box-shadow: 0 5px #666;
+          transform: translateY(4px);
+        }
+        </style>
+
+        <script src="/static/socket.io.js"></script>
+
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
         <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
         <script>
         // socket IO client side
         window.onload = function() {
-          var socket = io.connect('http://' + document.domain + ':' + location.port + '/status');
+          var url = 'http://' + document.domain + ':' + location.port + '/status';
+          console.log(url);
+          var socket = io.connect(url);
+          socket.on('connect', () => {
+            console.log(socket.id);
+
+          })
           socket.on('status', function(json) {
-              console.log("received status");
-              console.log(json);
+              //console.log("received status");
+              //console.log(json);
 
               door1button = document.getElementById("door1button");
               door2button = document.getElementById("door2button");
               // update buttons
               if (json.door1)
               {
-                door1button.src = "/static/close.jpg";
+                door1button.innerHTML = "Close";
+                door1button.style = "background-color: #FF0000"; // red
               } else {
-                door1button.src = "/static/open.jpg";
+                door1button.innerHTML = "Open";
+                door1button.style = "background-color: #4CAF50"; // green
               }
               if (json.door2)
               {
-                door2button.src = "/static/close.jpg";
+                door2button.innerHTML = "Close";
+                door2button.style = "background-color: #FF0000";
               } else {
-                door2button.src = "/static/open.jpg";
+                door2button.innerHTML = "Open";
+                door2button.style = "background-color: #4CAF50";
               }
 
           }); // end socket.on
@@ -55,8 +90,9 @@
         </head>
         <body>
         Welcome to garage-pi.<br>
-        <img src="{{doorimage}}"></img><br>
-        <img id="door1button" src="{{ door1buttonimage }}" onClick="trigger1();"></img><br>
-        <img id="door2button" src="{{ door2buttonimage }}" onClick="trigger2();"></img><br>
+        <button id="door1button" class="button" onClick="trigger1();">Checking...</button>
+        <BR>
+        <BR>
+        <button id="door2button" class="button" onClick="trigger2();">Checking...</button>
         </body>
         </html>
