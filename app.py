@@ -11,7 +11,6 @@ from flask_socketio import SocketIO, emit
 import atexit
 import RPi.GPIO as GPIO
 from threading import Thread
-import eventlet
 import keys
 
 # create logger
@@ -26,7 +25,18 @@ log.addHandler(ch)
 # create flask and socket
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
-socketio = SocketIO(app)
+
+http = "https://"
+#async_mode='threading'
+async_mode='eventlet'
+
+if async_mode == 'eventlet':
+    # we want to use eventlet (otherwise https certfile doens't work on socketio)
+    # but we're using a python thread - so we have to monkeypatch
+    import eventlet
+    eventlet.monkey_patch()
+
+socketio = SocketIO(app, async_mode=async_mode)
 
 # import camera driver
 os.environ['CAMERA'] = "opencv"
@@ -92,7 +102,9 @@ def loop(socketio):
         status = getDoorStatus()
         #log.debug(status)
         # only emit if there's a change
+        log.debug("%s->%s  %s->%s", status['door1'], status1, status['door2'], status2)
         if (status['door1'] != status1 or status['door2'] != status2):
+            log.debug("emitting door status " + str(status))
             socketio.emit('status', status, namespace='/status', broadcast=True)
         status1 = status['door1']
         status2 = status['door2']
@@ -120,7 +132,7 @@ def door():
         log.debug("cookie is valid")
         now = datetime.datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        return render_template('door.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
+        return render_template('door.html', http=http, rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
     else:
         log.debug("cookie is NOT valid")
         return redirect(url_for("index"))
@@ -206,5 +218,6 @@ if __name__ == '__main__':
     t = Thread(target=loop, args=(socketio,))
     t.start()
 
-    socketio.run(app, certfile='fullchain.pem', keyfile='privkey.pem',
+    socketio.run(app,
+        certfile='fullchain.pem', keyfile='privkey.pem',
         debug=True, host='0.0.0.0', port=5010, use_reloader=False)

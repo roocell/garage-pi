@@ -37,7 +37,7 @@
         <script>
         // socket IO client side
         window.onload = function() {
-          var url = 'https://' + document.domain + ':' + location.port + '/status';
+          var url = "{{http}}" + document.domain + ':' + location.port + '/status';
           console.log(url);
           var socket = io.connect(url);
           socket.on('connect', () => {
@@ -45,17 +45,18 @@
 
           })
           socket.on('status', function(json) {
-              //console.log("received status");
-              //console.log(json);
+              console.log(json);
 
               door1button = document.getElementById("door1button");
               door2button = document.getElementById("door2button");
               // update buttons
               if (json.door1)
               {
+                console.log("making red");
                 door1button.innerHTML = "Close";
                 door1button.style = "background-color: #FF0000"; // red
               } else {
+                console.log("making green");
                 door1button.innerHTML = "Open";
                 door1button.style = "background-color: #4CAF50"; // green
               }
@@ -103,7 +104,7 @@
               hls.attachMedia(video);
               hls.on(Hls.Events.MEDIA_ATTACHED, function () {
                 console.log("video and hls.js are now bound together !");
-                var src = 'https://' + document.domain + ':' + location.port + '/video/garage.m3u8';
+                var src = "{{http}}" + document.domain + ':' + location.port + '/video/garage.m3u8';
                 hls.loadSource(src);
                 hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
                   console.log("manifest loaded, found " + data.levels.length + " quality level");
