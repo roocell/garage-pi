@@ -1,0 +1,65 @@
+ffmpeg -fflags nobuffer \
+ -rtsp_transport udp \
+ -i rtsp://roocell:Garagewyze@192.168.1.236/live \
+ -vsync 0 \
+ -copyts \
+ -vcodec copy \
+ -movflags frag_keyframe+empty_moov \
+ -an \
+ -hls_flags delete_segments+append_list \
+ -f segment \
+ -segment_list_flags live \
+ -segment_time 1 \
+ -segment_list_size 3 \
+ -segment_format mpegts \
+ -segment_list /tmp/stream/index.m3u8 \
+ -segment_list_type m3u8 \
+ -segment_list_entry_prefix /stream/ \
+ /tmp/stream/%d.ts
+
+ffmpeg -i rtsp://roocell:Garagewyze@192.168.1.236/live -s 320x240 -fflags flush_packets -max_delay 2 -flags -global_header -hls_time 2 -hls_list_size 3 -vcodec copy -y /home/pi/garage-pi/static/garage.m3u8
+
+ffmpeg -y -rtsp_transport tcp -i rtsp://roocell:Garagewyze@192.168.1.236/live -vframes 1 /home/pi/garage-pi/static/snap.jpg
+
+# this one is working pretty well
+# sometimes you just need to find the magic command
+# have to use vcodec copy for efficiency - the pizero can't do any more work (like scaling)
+ffmpeg -fflags nobuffer \
+ -rtsp_transport udp \
+ -i rtsp://roocell:Garagewyze@192.168.1.236/live \
+ -vsync 0 \
+ -copyts \
+ -vcodec copy \
+ -movflags frag_keyframe+empty_moov \
+ -an \
+ -hls_flags delete_segments+append_list \
+ -f segment \
+ -segment_list_flags live \
+ -segment_time 0.5 \
+ -segment_list_size 1 \
+ -segment_format mpegts \
+ -segment_list /home/pi/garage-pi/static/garage.m3u8 \
+ -segment_list_type m3u8 \
+ -segment_list_entry_prefix /static/ \
+ /home/pi/garage-pi/static/%3d.ts
+
+ ffmpeg -fflags nobuffer \
+  -rtsp_transport udp \
+  -i rtsp://roocell:Garagewyze@192.168.1.236/live \
+  -vsync 0 \
+  -copyts \
+  -vcodec copy \
+  -an \
+  -movflags frag_keyframe+empty_moov \
+  -an \
+  -hls_flags delete_segments \
+  -f segment \
+  -segment_list_flags live \
+  -segment_wrap 2 \
+  -segment_time 0.5 \
+  -segment_list_size 1 \
+  -segment_format mpegts \
+  -segment_list /home/pi/garage-pi/video/garage.m3u8 \
+  -segment_list_type m3u8 \
+  -segment_list_entry_prefix /video/ \
+  /home/pi/garage-pi/video/%3d.ts

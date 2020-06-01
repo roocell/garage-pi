@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask import Response
-import json, os, time, sys
+import json, os, time, sys, datetime
 from importlib import import_module
 import logging
 from flask_socketio import SocketIO, emit
@@ -28,11 +28,15 @@ socketio = SocketIO(app)
 os.environ['CAMERA'] = "opencv"
 os.environ['OPENCV_CAMERA_SOURCE'] = "0"
 os.environ['FPS'] = "1"
-fps = int(os.environ['FPS'])
+os.environ['RTSPWIDTH'] = "320"
+os.environ['RTSPHEIGHT'] = "240"
+os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 if os.environ.get('CAMERA'):
     Camera = import_module('camera_' + os.environ['CAMERA']).Camera
 else:
     from camera import Camera
+# commend to disable RTSP camera
+#rtspCamera = Camera()
 
 
 user = "roocell"
@@ -95,7 +99,7 @@ def loop(socketio):
 # routes
 @app.route('/')
 def index():
-    return render_template('index.html');
+    return render_template('index.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT']);
 
 # there is no open/close GPIO value
 # just set it high to move door.
@@ -143,7 +147,28 @@ def test_disconnect():
 
 @app.route('/rtsp')
 def rtsp():
-    return render_template('rtsp.html');
+    now = datetime.datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    return render_template('rtsp.html', datetime=dt_string);
+@app.route('/video/<path:filename>')
+def video_dir(filename):
+    return send_from_directory(app.root_path + '/video/', filename)
+
+def gen(camera):
+    """Video streaming generator function."""
+
+    while True:
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        # this religuishes the CPU so another route can be processed
+        # but it's far from true concurrency
+        # https://github.com/miguelgrinberg/Flask-SocketIO/issues/896
+        socketio.sleep(0)
+@app.route('/video_feed')
+def video_feed():
+    return Response(gen(rtspCamera),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 #=====================================================
 # main
