@@ -3,7 +3,7 @@
 # sudo killall app.py; python3 app.py
 
 from flask import Flask, jsonify, request, render_template, send_from_directory
-from flask import Response
+from flask import Response, redirect, url_for
 import json, os, time, sys, datetime
 from importlib import import_module
 import logging
@@ -12,6 +12,7 @@ import atexit
 import RPi.GPIO as GPIO
 from threading import Thread
 import eventlet
+import keys
 
 # create logger
 log = logging.getLogger(__file__)
@@ -99,15 +100,30 @@ def loop(socketio):
 
 
 @app.route('/')
-def no_default_route():
-    return "OK"
+def index():
+    return render_template('index.html');
+@app.route('/handle_data', methods=['POST'])
+def handle_data():
+    key = request.form['key']
+    if (key == keys.authkey):
+        response = redirect(url_for("door"))
+        response.set_cookie('garage-pi-cookie', keys.authcookie)
+    else:
+        response = "NOK"
+    return response
 
 # routes
 @app.route('/door')
-def index():
-    now = datetime.datetime.now()
-    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-    return render_template('door.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
+def door():
+    cookie = request.cookies.get('garage-pi-cookie')
+    if (cookie == keys.authcookie):
+        log.debug("cookie is valid")
+        now = datetime.datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        return render_template('door.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
+    else:
+        log.debug("cookie is NOT valid")
+        return redirect(url_for("index"))
 
 # there is no open/close GPIO value
 # just set it high to move door.

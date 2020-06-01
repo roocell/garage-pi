@@ -1,0 +1,2 @@
+authkey = "thisisthekeytoenterintheform"
+authcookie = "thisiswhatisstoredinthecookie"
