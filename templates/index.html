@@ -30,10 +30,9 @@
         }
         </style>
 
-        <script src="/static/socket.io.js"></script>
-
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
         <script>
         // socket IO client side
@@ -94,8 +93,23 @@
         <BR><BR>
         <button id="door2button" class="button" onClick="trigger2();">Checking...</button>
         <BR><BR>
-        <!-- <img height={{rtspheight}} width={{rtspwidth}} src="/video_feed"> -->
-        <img height={{rtspheight}} width={{rtspwidth}} src="/static/snap.jpg">
+        {{datetime}} <BR>
+        <video id="video" playsinline autoplay muted width=640 height=480></video>
+          <script>
+            if (Hls.isSupported()) {
+              var video = document.getElementById('video');
+              var hls = new Hls();
+              // bind them together
+              hls.attachMedia(video);
+              hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+                console.log("video and hls.js are now bound together !");
+                hls.loadSource("/video/garage.m3u8");
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                  console.log("manifest loaded, found " + data.levels.length + " quality level");
+                });
+              });
+            }
+          </script>
 
         </body>
         </html>

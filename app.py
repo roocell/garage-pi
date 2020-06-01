@@ -1,4 +1,7 @@
 #!/usr/bin/python3
+
+# sudo killall app.py; python3 app.py
+
 from flask import Flask, jsonify, request, render_template, send_from_directory
 from flask import Response
 import json, os, time, sys, datetime
@@ -8,7 +11,7 @@ from flask_socketio import SocketIO, emit
 import atexit
 import RPi.GPIO as GPIO
 from threading import Thread
-
+import eventlet
 
 # create logger
 log = logging.getLogger(__file__)
@@ -95,11 +98,16 @@ def loop(socketio):
         time.sleep(1)                   # Wait for 1 second
 
 
+@app.route('/')
+def no_default_route():
+    return "OK"
 
 # routes
-@app.route('/')
+@app.route('/door')
 def index():
-    return render_template('index.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT']);
+    now = datetime.datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    return render_template('door.html', rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
 
 # there is no open/close GPIO value
 # just set it high to move door.
@@ -182,4 +190,5 @@ if __name__ == '__main__':
     t = Thread(target=loop, args=(socketio,))
     t.start()
 
-    socketio.run(app, debug=True, host='0.0.0.0', use_reloader=False)
+    socketio.run(app, certfile='fullchain.pem', keyfile='privkey.pem',
+        debug=True, host='0.0.0.0', port=5010, use_reloader=False)
