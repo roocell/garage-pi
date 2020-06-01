@@ -45,18 +45,18 @@
 
           })
           socket.on('status', function(json) {
-              console.log(json);
+              //console.log(json);
 
               door1button = document.getElementById("door1button");
               door2button = document.getElementById("door2button");
               // update buttons
               if (json.door1)
               {
-                console.log("making red");
+                //console.log("making red");
                 door1button.innerHTML = "Close";
                 door1button.style = "background-color: #FF0000"; // red
               } else {
-                console.log("making green");
+                //console.log("making green");
                 door1button.innerHTML = "Open";
                 door1button.style = "background-color: #4CAF50"; // green
               }

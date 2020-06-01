@@ -102,9 +102,9 @@ def loop(socketio):
         status = getDoorStatus()
         #log.debug(status)
         # only emit if there's a change
-        log.debug("%s->%s  %s->%s", status['door1'], status1, status['door2'], status2)
+        #log.debug("%s->%s  %s->%s", status['door1'], status1, status['door2'], status2)
         if (status['door1'] != status1 or status['door2'] != status2):
-            log.debug("emitting door status " + str(status))
+            #log.debug("emitting door status " + str(status))
             socketio.emit('status', status, namespace='/status', broadcast=True)
         status1 = status['door1']
         status2 = status['door2']
@@ -219,5 +219,5 @@ if __name__ == '__main__':
     t.start()
 
     socketio.run(app,
-        certfile='fullchain.pem', keyfile='privkey.pem',
+        certfile='/home/pi/garage-pi/fullchain.pem', keyfile='/home/pi/garage-pi/privkey.pem',
         debug=True, host='0.0.0.0', port=5010, use_reloader=False)
