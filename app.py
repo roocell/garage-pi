@@ -52,10 +52,10 @@ else:
 # commend to disable RTSP camera
 #rtspCamera = Camera()
 
+import emailer
+sender = emailer.Emailer()
 
-user = "roocell"
-password = "garage-pi"
-
+# GPIO
 door1 = 7  # GPIO4
 door2 = 37 # GPIO26
 
@@ -106,6 +106,12 @@ def loop(socketio):
         if (status['door1'] != status1 or status['door2'] != status2):
             #log.debug("emitting door status " + str(status))
             socketio.emit('status', status, namespace='/status', broadcast=True)
+
+            # send email notif
+            emailSubject = "garage-pi " + str(status)
+            emailContent = "garage-pi " + str(status)
+            sender.sendmail("", emailSubject, emailContent)
+
         status1 = status['door1']
         status2 = status['door2']
         time.sleep(1)                   # Wait for 1 second
@@ -176,6 +182,7 @@ def connect():
     status2 = status['door2']
     # always emit at connect so client can update
     socketio.emit('status', status, namespace='/status', broadcast=True)
+
     return "OK"
 @socketio.on('disconnect', namespace='/status')
 def test_disconnect():
