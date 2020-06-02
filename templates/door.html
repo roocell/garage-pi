@@ -96,6 +96,7 @@
         <BR><BR>
         {{datetime}} <BR>
         <video id="video" playsinline autoplay muted width={{rtspwidth}} height={{rtspheight}}></video>
+        <p id="message"> RTSP video (keep refreshing until you see the video) </p>
           <script>
             if (Hls.isSupported()) {
               var video = document.getElementById('video');
@@ -110,6 +111,9 @@
                   console.log("manifest loaded, found " + data.levels.length + " quality level");
                 });
               });
+            } else {
+              var message = document.getElementById('message');
+              message.innerHTML = "HLS not supported in this browser. (no video)";
             }
           </script>
 
