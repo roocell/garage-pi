@@ -93,10 +93,15 @@ def getDoorStatus():
 
 status1 = False
 status2 = False
-
 def loop(socketio):
     global status1
     global status2
+    # init last late email to 16 minutes ago - so the 15min late email will trigger
+    # if app starts past time limit
+    late_email_periodicity = 15  # minutes
+    late_hour = 22 # 10pm
+    morning_hour = 7 # 7am
+    last_late_email = datetime.datetime.now() - datetime.timedelta(minutes=late_email_periodicity+1)
     setupgpio()
     while True:
         status = getDoorStatus()
@@ -114,6 +119,18 @@ def loop(socketio):
 
         status1 = status['door1']
         status2 = status['door2']
+
+        # if it's late - send an email reminder (every 15min until the next morning)
+        now = datetime.datetime.now()
+        today10pm = now.replace(hour=late_hour, minute=0, second=0, microsecond=0)
+        tomorrow = now.replace(hour=morning_hour, minute=0, second=0, microsecond=0) + datetime.timedelta(days=1)
+        if ( (status1 or status2) and
+            now > today10pm and now < tomorrow and last_late_email < (datetime.datetime.now() - datetime.timedelta(minutes=late_email_periodicity)) ):
+            emailSubject = str(late_hour-12) + "pm and the garage door is open"
+            emailContent = "don't let someone steal your bike!"
+            sender.sendmail("", emailSubject, emailContent)
+            last_late_email = datetime.datetime.now()
+
         time.sleep(1)                   # Wait for 1 second
 
 
