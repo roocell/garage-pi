@@ -29,7 +29,6 @@ app.config['SECRET_KEY'] = 'secret!'
 http = "https://"
 #async_mode='threading'
 async_mode='eventlet'
-
 if async_mode == 'eventlet':
     # we want to use eventlet (otherwise https certfile doens't work on socketio)
     # but we're using a python thread - so we have to monkeypatch
@@ -96,6 +95,7 @@ status2 = False
 def loop(socketio):
     global status1
     global status2
+
     # init last late email to 16 minutes ago - so the 15min late email will trigger
     # if app starts past time limit
     late_email_periodicity = 15  # minutes
@@ -133,18 +133,40 @@ def loop(socketio):
 
         time.sleep(1)                   # Wait for 1 second
 
-
+bad_key_cnt = 0
+bad_key_backoff = 0
 @app.route('/')
 def index():
     return render_template('index.html');
 @app.route('/handle_data', methods=['POST'])
 def handle_data():
+    global bad_key_cnt
+    global bad_key_backoff
+
+    backoff_time = 5
+    backoff_cnt = 5
+
+    # if backoff set - don't allow any entry
+    if (bad_key_backoff):
+        if (bad_key_backoff !=0 and bad_key_backoff < datetime.datetime.now()):
+            bad_key_backoff = 0
+            bad_key_cnt = 0
+        return "NOK-BACKOFF-" + str(bad_key_backoff) + "<" + str(datetime.datetime.now())
+
+    bad_key_cnt = bad_key_cnt + 1
+    if (bad_key_cnt > backoff_cnt):
+        log.debug("set backoff timer")
+        bad_key_backoff = datetime.datetime.now() + datetime.timedelta(minutes=backoff_time)
+        response = "NOK-BACKOFF-SET-" + str(bad_key_backoff)
+        return response
+
     key = request.form['key']
     if (key == keys.authkey):
         response = redirect(url_for("door"))
         response.set_cookie('garage-pi-cookie', keys.authcookie)
     else:
-        response = "NOK"
+        response = "NOK-BADKEY-" + str(bad_key_cnt)
+
     return response
 
 # routes
