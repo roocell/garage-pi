@@ -55,11 +55,11 @@ import emailer
 sender = emailer.Emailer()
 
 # GPIO
-door1 = 7  # GPIO4
-door2 = 37 # GPIO26
+door2 = 7  # GPIO4
+door1 = 37 # GPIO26
 
-relay1 = 10 # GPIO15
-relay2 = 8 # GPIO14
+relay1 = 8 # GPIO14
+relay2 = 10 # GPIO15
 
 def setupgpio():
     GPIO.setmode(GPIO.BOARD)       # use PHYSICAL GPIO Numbering
@@ -153,7 +153,6 @@ def handle_data():
             bad_key_cnt = 0
         return "NOK-BACKOFF-" + str(bad_key_backoff) + "<" + str(datetime.datetime.now())
 
-    bad_key_cnt = bad_key_cnt + 1
     if (bad_key_cnt > backoff_cnt):
         log.debug("set backoff timer")
         bad_key_backoff = datetime.datetime.now() + datetime.timedelta(minutes=backoff_time)
@@ -166,6 +165,7 @@ def handle_data():
         response.set_cookie('garage-pi-cookie', keys.authcookie)
     else:
         response = "NOK-BADKEY-" + str(bad_key_cnt)
+        bad_key_cnt = bad_key_cnt + 1
 
     return response
 
