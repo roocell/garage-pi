@@ -6,12 +6,14 @@
 # convert the stream properly
 
 import os
+import picamera
 import cv2
 from base_camera import BaseCamera
 
 
 class Camera(BaseCamera):
-    video_source = "rtsp://roocell:Garagewyze@192.168.1.236/live"
+    #video_source = "rtsp://roocell:Garagewyze@192.168.1.236/live"
+    video_source = 0
     fps = 10
     def __init__(self):
         #if os.environ.get('OPENCV_CAMERA_SOURCE'):
@@ -30,13 +32,13 @@ class Camera(BaseCamera):
     @staticmethod
     def frames():
         # https://docs.opencv.org/3.4/d4/d15/group__videoio__flags__base.html
+        camera = cv2.VideoCapture(0)
         #camera = cv2.VideoCapture(Camera.video_source, cv2.CAP_FFMPEG)
-        camera = cv2.VideoCapture(Camera.video_source, cv2.CAP_FFMPEG)
 
         # smaller video allows more FPS and is more stable
         # TODO: work on shrinking frame size
-        camera.set(cv2.CAP_PROP_FRAME_WIDTH, int(os.environ['RTSPWIDTH']))
-        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, int(os.environ['RTSPHEIGHT']))
+        camera.set(cv2.CAP_PROP_FRAME_WIDTH, int(os.environ['CAMWIDTH']))
+        camera.set(cv2.CAP_PROP_FRAME_HEIGHT, int(os.environ['CAMHEIGHT']))
 
         # this has an impact on CPU!
         camera.set(cv2.CAP_PROP_FPS, Camera.fps)

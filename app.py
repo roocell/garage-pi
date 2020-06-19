@@ -26,9 +26,23 @@ log.addHandler(ch)
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
 
-http = "https://"
-#async_mode='threading'
-async_mode='eventlet'
+
+# import camera driver
+os.environ['CAMERA'] = "pi"
+os.environ['FPS'] = "10"
+os.environ['CAMWIDTH'] = "320"
+os.environ['CAMHEIGHT'] = "280"
+if os.environ.get('CAMERA'):
+    Camera = import_module('camera_' + os.environ['CAMERA']).Camera
+else:
+    from camera import Camera
+
+# seems eventlet and monkeypatch is messing up picamera
+# if we run HTTP and use threading it will work
+
+http = "http://"
+async_mode='threading'
+#async_mode='eventlet'
 if async_mode == 'eventlet':
     # we want to use eventlet (otherwise https certfile doens't work on socketio)
     # but we're using a python thread - so we have to monkeypatch
@@ -36,20 +50,6 @@ if async_mode == 'eventlet':
     eventlet.monkey_patch()
 
 socketio = SocketIO(app, async_mode=async_mode)
-
-# import camera driver
-os.environ['CAMERA'] = "opencv"
-os.environ['OPENCV_CAMERA_SOURCE'] = "0"
-os.environ['FPS'] = "1"
-os.environ['RTSPWIDTH'] = "320"
-os.environ['RTSPHEIGHT'] = "240"
-os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
-if os.environ.get('CAMERA'):
-    Camera = import_module('camera_' + os.environ['CAMERA']).Camera
-else:
-    from camera import Camera
-# commend to disable RTSP camera
-#rtspCamera = Camera()
 
 import emailer
 sender = emailer.Emailer()
@@ -143,8 +143,8 @@ def handle_data():
     global bad_key_cnt
     global bad_key_backoff
 
-    backoff_time = 5
-    backoff_cnt = 5
+    backoff_time = 1
+    backoff_cnt = 3
 
     # if backoff set - don't allow any entry
     if (bad_key_backoff):
@@ -177,7 +177,7 @@ def door():
         log.debug("cookie is valid")
         now = datetime.datetime.now()
         dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-        return render_template('door.html', http=http, rtspwidth=os.environ['RTSPWIDTH'], rtspheight=os.environ['RTSPHEIGHT'], datetime=dt_string);
+        return render_template('door.html', http=http, camwidth=os.environ['CAMWIDTH'], camheight=os.environ['CAMHEIGHT'], datetime=dt_string);
     else:
         log.debug("cookie is NOT valid")
         return redirect(url_for("index"))
@@ -247,9 +247,10 @@ def gen(camera):
         # but it's far from true concurrency
         # https://github.com/miguelgrinberg/Flask-SocketIO/issues/896
         socketio.sleep(0)
+
 @app.route('/video_feed')
 def video_feed():
-    return Response(gen(rtspCamera),
+    return Response(gen(Camera()),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 #=====================================================
@@ -260,10 +261,16 @@ def cleanup():
 
 if __name__ == '__main__':
     atexit.register(cleanup)
-    log.debug("starting")
+    log.debug("starting loop")
     t = Thread(target=loop, args=(socketio,))
     t.start()
 
-    socketio.run(app,
-        certfile='/home/pi/garage-pi/fullchain.pem', keyfile='/home/pi/garage-pi/privkey.pem',
-        debug=True, host='0.0.0.0', port=5010, use_reloader=False)
+    if (http == "https://"):
+        log.debug("starting HTTPS")
+        socketio.run(app,
+            certfile='/home/pi/garage-pi/fullchain.pem', keyfile='/home/pi/garage-pi/privkey.pem',
+            debug=True, host='0.0.0.0', port=5010, use_reloader=False)
+    else:
+        log.debug("starting HTTP")
+        socketio.run(app,
+            debug=True, host='0.0.0.0', port=5010, use_reloader=False)

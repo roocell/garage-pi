@@ -99,10 +99,10 @@ class BaseCamera(object):
 
             # if there hasn't been any clients asking for frames in
             # the last 10 seconds then stop the thread
-            # if time.time() - BaseCamera.last_access > 10:
-            #     frames_iterator.close()
-            #     print('Stopping camera thread due to inactivity.')
-            #     break
+            if time.time() - BaseCamera.last_access > 10:
+                frames_iterator.close()
+                print('Stopping camera thread due to inactivity.')
+                break
             # ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             # THIS IS CAUSING THE SERVER TO HANG IF WE RESTART THE SERVER
             # AND A WEB PAGE IS UP - BUT NOT REFRESHED

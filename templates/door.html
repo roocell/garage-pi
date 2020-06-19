@@ -31,7 +31,6 @@
         </style>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.2.0/socket.io.js" integrity="sha256-yr4fRk/GU1ehYJPAs8P4JlTgu0Hdsp4ZKrx8bDEDC3I=" crossorigin="anonymous"></script>
-        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
         <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"> </script>
 
         <script>
@@ -95,27 +94,8 @@
         <button id="door2button" class="button" onClick="trigger2();">Checking...</button>
         <BR><BR>
         {{datetime}} <BR>
-        <video id="video" playsinline autoplay muted width={{rtspwidth}} height={{rtspheight}}></video>
-        <p id="message"> RTSP video (keep refreshing until you see the video) </p>
-          <script>
-            if (Hls.isSupported()) {
-              var video = document.getElementById('video');
-              var hls = new Hls();
-              // bind them together
-              hls.attachMedia(video);
-              hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-                console.log("video and hls.js are now bound together !");
-                var src = "{{http}}" + document.domain + ':' + location.port + '/video/garage.m3u8';
-                hls.loadSource(src);
-                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                  console.log("manifest loaded, found " + data.levels.length + " quality level");
-                });
-              });
-            } else {
-              var message = document.getElementById('message');
-              message.innerHTML = "HLS not supported in this browser. (no video)";
-            }
-          </script>
+
+        <img src="/video_feed">
 
         </body>
         </html>
