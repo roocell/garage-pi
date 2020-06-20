@@ -1,5 +1,5 @@
 # garage-pi
 pi zero to control garage doors
-
-![front](garage-pi-front.jpg)
-![back](garage-pi-back.jpg)
+<img src="garage-pi-front.jpg" width="100">
+<img src="garage-pi-back.jpg" width="100">
+<img src="garage-pi-screenshot.jpg" width="100">
