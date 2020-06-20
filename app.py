@@ -28,7 +28,7 @@ app.config['SECRET_KEY'] = 'secret!'
 
 
 # import camera driver
-os.environ['CAMERA'] = "pi"
+os.environ['CAMERA'] = "opencv"
 os.environ['FPS'] = "10"
 os.environ['CAMWIDTH'] = "320"
 os.environ['CAMHEIGHT'] = "280"
@@ -39,10 +39,11 @@ else:
 
 # seems eventlet and monkeypatch is messing up picamera
 # if we run HTTP and use threading it will work
+#https://github.com/miguelgrinberg/flask-video-streaming/issues/39
 
-http = "http://"
-async_mode='threading'
-#async_mode='eventlet'
+http = "https://"
+#async_mode='threading'
+async_mode='eventlet'
 if async_mode == 'eventlet':
     # we want to use eventlet (otherwise https certfile doens't work on socketio)
     # but we're using a python thread - so we have to monkeypatch

@@ -12,27 +12,14 @@ from base_camera import BaseCamera
 
 
 class Camera(BaseCamera):
-    #video_source = "rtsp://roocell:Garagewyze@192.168.1.236/live"
-    video_source = 0
-    fps = 10
+    video_source = "http://127.0.0.1:5011/video_feed"
     def __init__(self):
-        #if os.environ.get('OPENCV_CAMERA_SOURCE'):
-            #Camera.set_video_source(int(os.environ['OPENCV_CAMERA_SOURCE']))
-        if os.environ.get('FPS'):
-            Camera.set_fps(int(os.environ['FPS']))
         super(Camera, self).__init__()
-
-    @staticmethod
-    def set_video_source(source):
-        Camera.video_source = source
-    @staticmethod
-    def set_fps(fps):
-        Camera.fps = fps
 
     @staticmethod
     def frames():
         # https://docs.opencv.org/3.4/d4/d15/group__videoio__flags__base.html
-        camera = cv2.VideoCapture(0)
+        camera = cv2.VideoCapture(Camera.video_source)
         #camera = cv2.VideoCapture(Camera.video_source, cv2.CAP_FFMPEG)
 
         # smaller video allows more FPS and is more stable
@@ -41,10 +28,10 @@ class Camera(BaseCamera):
         camera.set(cv2.CAP_PROP_FRAME_HEIGHT, int(os.environ['CAMHEIGHT']))
 
         # this has an impact on CPU!
-        camera.set(cv2.CAP_PROP_FPS, Camera.fps)
+        camera.set(cv2.CAP_PROP_FPS, int(os.environ['FPS']))
 
         # helps significantly with frame size
-        encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 20]
+        #encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 20]
 
         if not camera.isOpened():
             raise RuntimeError('Could not start camera.')
