@@ -212,6 +212,14 @@ def trigger2():
     return "OK"
 
 @app.route('/status')
+def status():
+    global status1
+    global status2
+    status = getDoorStatus()
+    status1 = status['door1']
+    status2 = status['door2']
+    return status
+
 @socketio.on('connect', namespace='/status')
 def connect():
     global status1
@@ -226,7 +234,7 @@ def connect():
     return "OK"
 @socketio.on('disconnect', namespace='/status')
 def test_disconnect():
-    print('flask client disconnected')
+    log.debug('flask client disconnected')
 
 @app.route('/rtsp')
 def rtsp():

@@ -35,41 +35,48 @@
 
         <script>
         // socket IO client side
-        window.onload = function() {
+        function ready() {
           var url = "{{http}}" + document.domain + ':' + location.port + '/status';
           console.log(url);
           var socket = io.connect(url);
           socket.on('connect', () => {
+            console.log("connected");
             console.log(socket.id);
+          }) // end socket.on
 
-          })
           socket.on('status', function(json) {
-              //console.log(json);
+            console.log("io: " + json.door1)
+              updateStatus(json);
+          });
 
-              door1button = document.getElementById("door1button");
-              door2button = document.getElementById("door2button");
-              // update buttons
-              if (json.door1)
-              {
-                //console.log("making red");
-                door1button.innerHTML = "Close";
-                door1button.style = "background-color: #FF0000"; // red
-              } else {
-                //console.log("making green");
-                door1button.innerHTML = "Open";
-                door1button.style = "background-color: #4CAF50"; // green
-              }
-              if (json.door2)
-              {
-                door2button.innerHTML = "Close";
-                door2button.style = "background-color: #FF0000";
-              } else {
-                door2button.innerHTML = "Open";
-                door2button.style = "background-color: #4CAF50";
-              }
-
-          }); // end socket.on
         }
+        document.addEventListener("DOMContentLoaded", ready);
+
+        function updateStatus(json)
+        {
+            door1button = document.getElementById("door1button");
+            door2button = document.getElementById("door2button");
+            // update buttons
+            if (json.door1)
+            {
+              //console.log("making red");
+              door1button.innerHTML = "Close";
+              door1button.style = "background-color: #FF0000"; // red
+            } else {
+              //console.log("making green");
+              door1button.innerHTML = "Open";
+              door1button.style = "background-color: #4CAF50"; // green
+            }
+            if (json.door2)
+            {
+              door2button.innerHTML = "Close";
+              door2button.style = "background-color: #FF0000";
+            } else {
+              door2button.innerHTML = "Open";
+              door2button.style = "background-color: #4CAF50";
+            }
+        }
+
         function trigger1()
         {
           $.getJSON('/trigger1', {},
