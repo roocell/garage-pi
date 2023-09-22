@@ -62,10 +62,17 @@ door1 = 37 # GPIO26
 relay1 = 8 # GPIO14
 relay2 = 10 # GPIO15
 
+plug_detect_pin = 29 #GPIO5
+
+status1 = False
+status2 = False
+plug = False
+
 def setupgpio():
     GPIO.setmode(GPIO.BOARD)       # use PHYSICAL GPIO Numbering
     GPIO.setup(door1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
     GPIO.setup(door2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+    GPIO.setup(plug_detect_pin, GPIO.IN)
 
     # connection is on the NO (normally open) port
     # on the relay
@@ -77,49 +84,63 @@ def setupgpio():
     GPIO.output(relay2, GPIO.HIGH)  # default LOW (off)
 
 
-def getDoorStatus():
+# updates globals (like after we detect a change)
+def updateStatus(status):
+    global status1
+    global status2
+    global plug
+    status1 = status['door1']
+    status2 = status['door2']
+    plug = status['plugged_in']
+
+def getStatus():
     if (GPIO.input(door1) == GPIO.LOW):
-        newstatus1 = False;
+        s1 = False
     else:
         # ideally we would have another sensor at the open position too
         # but let's just assume it's at least partially open
-        newstatus1 = True
+        s1 = True
 
     if (GPIO.input(door2) == GPIO.LOW):
-        newstatus2 = False;
+        s2 = False
     else:
-        newstatus2 = True
-    return {'door1' : newstatus1, 'door2' : newstatus2 }
+        s2 = True
 
-status1 = False
-status2 = False
+    if (GPIO.input(plug_detect_pin) == GPIO.LOW):
+        p = False
+    else:
+        p = True
+
+    return { 'door1' : s1, 'door2' : s2, 'plugged_in' : p }
+
 def loop(socketio):
     global status1
     global status2
+    global plug
 
     # init last late email to 16 minutes ago - so the 15min late email will trigger
     # if app starts past time limit
     late_email_periodicity = 15  # minutes
     late_hour = 22 # 10pm
     morning_hour = 7 # 7am
-    last_late_email = datetime.datetime.now() - datetime.timedelta(minutes=late_email_periodicity+1)
+    last_plug_email = last_late_email = datetime.datetime.now() - datetime.timedelta(minutes=late_email_periodicity+1)
     setupgpio()
     while True:
-        status = getDoorStatus()
+        status = getStatus()
         #log.debug(status)
         # only emit if there's a change
         #log.debug("%s->%s  %s->%s", status['door1'], status1, status['door2'], status2)
-        if (status['door1'] != status1 or status['door2'] != status2):
+        if status['door1'] != status1 or status['door2'] != status2 or status['plugged_in'] != plug:
             #log.debug("emitting door status " + str(status))
             socketio.emit('status', status, namespace='/status', broadcast=True)
 
-            # send email notif
-            emailSubject = "garage-pi " + str(status)
-            emailContent = "garage-pi " + str(status)
-            sender.sendmail("", emailSubject, emailContent)
+            if status['door1'] != status1 or status['door2'] != status2:
+                # send email notif (for doors only)
+                emailSubject = "garage-pi " + str(status)
+                emailContent = "garage-pi " + str(status)
+                sender.sendmail("", emailSubject, emailContent)
 
-        status1 = status['door1']
-        status2 = status['door2']
+        updateStatus(status)
 
         # if it's late - send an email reminder (every 15min until the next morning)
         now = datetime.datetime.now()
@@ -131,6 +152,13 @@ def loop(socketio):
             emailContent = "don't let someone steal your bike!"
             sender.sendmail("", emailSubject, emailContent)
             last_late_email = datetime.datetime.now()
+
+        if ( plug == False and
+            now > today10pm and now < tomorrow and last_plug_email < (datetime.datetime.now() - datetime.timedelta(minutes=late_email_periodicity)) ):
+            emailSubject = str(late_hour-12) + "pm and your charger isn't in"
+            emailContent = "save money! plug in the car!"
+            sender.sendmail("", emailSubject, emailContent)
+            last_plug_email = datetime.datetime.now()
 
         time.sleep(1)                   # Wait for 1 second
 
@@ -213,25 +241,20 @@ def trigger2():
 
 @app.route('/status')
 def status():
-    global status1
-    global status2
-    status = getDoorStatus()
-    status1 = status['door1']
-    status2 = status['door2']
+    status = getStatus()
+    updateStatus(status)
     return status
 
 @socketio.on('connect', namespace='/status')
 def connect():
-    global status1
-    global status2
     log.debug("flask client connected")
-    status = getDoorStatus()
-    status1 = status['door1']
-    status2 = status['door2']
+    status = getStatus()
+    updateStatus(status)
+
     # always emit at connect so client can update
     socketio.emit('status', status, namespace='/status', broadcast=True)
-
     return "OK"
+
 @socketio.on('disconnect', namespace='/status')
 def test_disconnect():
     log.debug('flask client disconnected')

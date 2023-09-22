@@ -56,6 +56,7 @@
         {
             door1button = document.getElementById("door1button");
             door2button = document.getElementById("door2button");
+            plugbutton = document.getElementById("plugbutton");
             // update buttons
             if (json.door1)
             {
@@ -74,6 +75,14 @@
             } else {
               door2button.innerHTML = "Open";
               door2button.style = "background-color: #4CAF50";
+            }
+            if (json.plugged_in)
+            {
+              plugbutton.innerHTML = "Plugged in";
+              plugbutton.style = "background-color: #4CAF50";
+            } else {
+              plugbutton.innerHTML = "Unplugged";
+              plugbutton.style = "background-color: #FF0000";
             }
         }
 
@@ -100,7 +109,9 @@
         <BR><BR>
         <button id="door2button" class="button" onClick="trigger2();">Checking...</button>
         <BR><BR>
-        {{datetime}} <BR>
+        <button id="plugbutton" class="button">Contacting GPT...</button>
+        <BR><BR>
+          {{datetime}} <BR>
 
         <img src="/video_feed" style="transform:rotate(0deg);">
 
