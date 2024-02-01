@@ -1,49 +1,65 @@
 import smtplib
-#import multiprocessing
-import os, sys
-#multiprocessing.set_start_method('spawn')
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import subprocess
 
 #Email Variables
 SMTP_SERVER = 'smtp.gmail.com' #Email Server (don't change!)
-SMTP_PORT = 587 #Server Port (don't change!)
-GMAIL_USERNAME = 'XXXXXXX@gmail.com' #change this to match your gmail account
-GMAIL_PASSWORD = 'XXXXXXXX'  #change this to match your gmail password
+SMTP_PORT = 465 #Server Port (don't change!)
+GMAIL_USERNAME = 'xxxx.xxxx@gmail.com' #change this to match your gmail account
+GMAIL_PASSWORD = "xxxx"
+#change this to match your gmail password
 
 DEFAULT_DESTINATION = "xxxx@gmail.com"
 
 
 class Emailer:
-    def sendmail_subprocess(self, recipient, subject, content):
 
-        #Create Headers
-        headers = ["From: " + GMAIL_USERNAME, "Subject: " + subject, "To: " + recipient,
-                   "MIME-Version: 1.0", "Content-Type: text/html"]
-        headers = "\r\n".join(headers)
+    def sendmail_smtp(self, subject, body, sender, recipients, password):
+        message = MIMEMultipart()
+        message['From'] = sender
+        message['To'] = ', '.join(recipients)
+        message['Subject'] = subject
 
-        #Connect to Gmail Server
-        session = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        session.ehlo()
-        session.starttls()
-        session.ehlo()
+        message.attach(MIMEText(body, 'plain'))
 
-        #Login to Gmail
-        session.login(GMAIL_USERNAME, GMAIL_PASSWORD)
+        try:
+            smtp_server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+            smtp_server.login(sender, password)
+            smtp_server.sendmail(sender, recipients, message.as_string())
+            smtp_server.quit()
+            print("Email sent successfully")
+        except Exception as e:
+            print("error ", e)
 
-        #Send Email & Exit
-        session.sendmail(GMAIL_USERNAME, recipient, headers + "\r\n\r\n" + content)
-        session.quit
+    # issues using smtplib with eventlet - so need to use command line
+    def sendmail_cmd(self, sender, recipient, subject, body, password):
+        # Construct the email content
+        email_content = f"From: {sender}\nTo: {recipient}\nSubject: {subject}\n\n{body}"
 
-    # there's a bug using smtplib with eventlet
-    # TypeError: wrap_socket() got an unexpected keyword argument '_context'
-    # spawning off another process is work around
-    # choose spawn instead of fork - otherwise the eventlet monkeypatch gets inherited
-    def sendmail(self, recipient, subject, content):
-        #thread = multiprocessing.Process(target=Emailer.sendmail_subprocess, args=(self, recipient, subject, content,))
-        #thread.start()
+        # Construct the curl command
+        curl_command = [
+            'curl',
+            '--url', 'smtps://smtp.gmail.com:465',
+            '--ssl-reqd',
+            '--mail-from', sender,
+            '--mail-rcpt', recipient,
+            '--user', f'{sender}:{password}',
+            '--upload-file', '-'
+        ]
 
-        if (recipient == ""):
-            recipient = DEFAULT_DESTINATION
-        # smtplib doesn't seem to work - just use msmtp on the command line
-        cmd = "printf \"To: " + recipient + "\nFrom: pigarage-pi@gmail.com\nSubject: " + subject + "\n\n" + content + "\" | msmtp -a default " + recipient
-        print(cmd)
-        os.system(cmd)
+        # Execute the curl command and pass the email content as stdin
+        try:
+            subprocess.run(curl_command, input=email_content, text=True, check=True)
+            print("Email sent successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"Error sending email: {e}")
+
+    def sendmail(self, recipient, subject, body):
+        self.sendmail_cmd(GMAIL_USERNAME, DEFAULT_DESTINATION, subject, body, GMAIL_PASSWORD)
+
+
+if __name__ == '__main__':
+  sender = Emailer()
+  sender.sendmail("", "test subject", "test content")
+   
